@@ -9,7 +9,7 @@ function App() {
   // useEffect dışında tanımlandı, böylece buton da kullanabilir
   const fetchData = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:5000/api/game");
+      const response = await fetch("https://flaskgamebackend.onrender.com/api/game");
       const data = await response.json();
       console.log(data);
       setWord(data.randomWord);
