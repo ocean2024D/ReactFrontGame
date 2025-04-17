@@ -1,5 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
-import './App.css';
+import React, { useEffect, useState, useRef } from "react";
 
 function App() {
   const [word, setWord] = useState(" ");
@@ -8,20 +7,19 @@ function App() {
   const [correctAnswer, setCorrectAnswer] = useState("");
   const [emoji, setEmoji] = useState("");
   const [score, setScore] = useState(0);
-  const [showGif, setShowGif] = useState(false);
   const [mistake, setMistake] = useState(0);
-  const [gameOverGif,setGameOverGif] = useState(false)
-  
-  // Audio Ref
-  const audioRef = useRef(new Audio('gameOver.mp3')); 
- const correct = useRef(new Audio('correct.mp3'))
- const wrong = useRef(new Audio('wrong.mp3'))
+  const [gameOverGif, setGameOverGif] = useState(false);
+  const [disabled, setDisabled] = useState(false);
+  const [selectedOption, setSelectedOption] = useState("");
+
+  const audioRef = useRef(new Audio("gameOver.mp3"));
+  const correct = useRef(new Audio("correct.mp3"));
+  const wrong = useRef(new Audio("wrong.mp3"));
+
   const fetchData = async () => {
     try {
       const response = await fetch("http://127.0.0.1:5000/api/game");
       const data = await response.json();
-      console.log(data);
-
       const [text, symbol] = data.randomWord.split(":");
 
       setWord(text);
@@ -29,31 +27,44 @@ function App() {
       setOptions(data.shuffledWords);
       setCorrectAnswer(text);
       setMessage("");
-      setShowGif(false);
+      setDisabled(false);
+      setSelectedOption("");
     } catch (error) {
       console.error("Error fetching data:", error);
     }
   };
 
   const HandleClick = (option) => {
+    if (disabled) return;
+    setDisabled(true);
+    setSelectedOption(option);
+
     if (option === correctAnswer) {
-      correct.current.play()
+      correct.current.play();
       setMessage("Bravo you win 😊");
-      setScore(prev => prev + 1);
-      setShowGif(true);
+      setScore((prev) => prev + 1);
+      setTimeout(() => {
+        fetchData();
+      }, 2000);
     } else {
-      wrong.current.play()
-      setMistake(prev => {
+      wrong.current.play();
+      setMistake((prev) => {
         const updated = prev + 1;
         if (updated === 3) {
-          setMessage("🔴 Game Over");
+          setMessage("Game Over");
           audioRef.current.play();
+          setGameOverGif(true);
         } else {
           setMessage("You lost 😒");
         }
         return updated;
       });
-      setShowGif(false);
+      setTimeout(() => {
+        setDisabled(false);
+        if (mistake < 3) {
+          fetchData();
+        }
+      }, 2000);
     }
   };
 
@@ -62,57 +73,73 @@ function App() {
   }, []);
 
   return (
-    <>
-      <div className='container'>
-        {mistake === 3 ? (
-          <div className="game-over">
-            <h1 style={{ color: "red" }}>🔴 Game Over</h1>
-            <button onClick={() => {
+    <div className="container" style={{ textAlign: "center", padding: "20px" }}>
+      {mistake === 3 ? (
+        <div>
+          {gameOverGif && (
+            <img
+              src="https://i.giphy.com/dkuZHIQsslFfy.webp"
+              alt="game over gif"
+              style={{ width: "150px", marginTop: "10px" }}
+            />
+          )}
+          <h2>score: {score}</h2>
+          <button
+            onClick={() => {
               setMistake(0);
               setScore(0);
+              setGameOverGif(false);
               fetchData();
-            }}>Restart 🔁</button>
-          </div>
-        ) : (
-          <>
-            <div>
-              <h2>Score: {score}</h2>
-              <h2>Jeu de Mot</h2>
-              <h2>{emoji}</h2>
-            </div>
+            }}
+          >
+            Restart 🔁
+          </button>
+        </div>
+      ) : (
+        <>
+          <h2>Jeu de Mot</h2>
+          <h2 style={{ fontSize: "80px" }}>{emoji}</h2>
 
-            <ul>
-              {options.map((option, index) => {
-                const [text] = option.split(":");
-                return (
-                  <li key={index} onClick={() => HandleClick(text)}>
-                    {text}
-                  </li>
-                );
-              })}
-            </ul>
+          <ul style={{ listStyle: "none", padding: 0 }}>
+            {options.map((option, index) => {
+              const [text] = option.split(":");
+              let backgroundColor = "white";
 
-            <button onClick={fetchData}>➡️</button>
+              if (selectedOption) {
+                if (text === selectedOption) {
+                  backgroundColor =
+                    text === correctAnswer ? "#a8e6a3" : "#f8a5a5";
+                }
+              }
 
-            <div>
-              {message && <p>{message}</p>}
+              return (
+                <li
+                  key={index}
+                  onClick={() => HandleClick(text)}
+                  style={{
+                    margin: "10px auto",
+                    padding: "10px",
+                    width: "200px",
+                    border: "1px solid gray",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    pointerEvents: disabled ? "none" : "auto",
+                    opacity: disabled ? 0.6 : 1,
+                    backgroundColor: backgroundColor,
+                    transition: "0.3s ease",
+                  }}
+                >
+                  {text}
+                </li>
+              );
+            })}
+          </ul>
 
-              {showGif && (
-                <img
-                  src="https://media.tenor.com/oXbHhcC79OMAAAAi/cute-aww.gif"
-                  alt="gif"
-                  style={{ width: "150px", marginTop: "10px" }}
-                />
-              )}
-            </div>
-          {/* <div> gameOverGif&&
-            <img  
-            src=''
-          </div> */}
-          </>
-        )}
-      </div>
-    </>
+          <h2 style={{ color: "green" }}>score: {score}</h2>
+          {message && <p>{message}</p>}
+        </>
+      )}
+    </div>
   );
 }
 
