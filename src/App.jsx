@@ -81,7 +81,7 @@ function App() {
             setDisabled(false);
             fetchData();
           }
-        }, 2000);
+        }, 1000);
 
         return updated;
       });
