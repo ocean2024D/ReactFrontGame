@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
 
 function App() {
+  const [usedWords, setUsedWords] = useState([]);
+  const [win, setWin] = useState(false);
   const [word, setWord] = useState(" ");
   const [options, setOptions] = useState([]);
   const [message, setMessage] = useState("");
@@ -22,6 +24,11 @@ function App() {
       const data = await response.json();
       const [text, symbol] = data.randomWord.split(":");
 
+      if (usedWords.includes(text)) {
+        fetchData(); 
+        return;
+      }
+
       setWord(text);
       setEmoji(symbol);
       setOptions(data.shuffledWords);
@@ -29,6 +36,7 @@ function App() {
       setMessage("");
       setDisabled(false);
       setSelectedOption("");
+      setUsedWords((prev) => [...prev, text]); 
     } catch (error) {
       console.error("Error fetching data:", error);
     }
@@ -42,10 +50,20 @@ function App() {
     if (option === correctAnswer) {
       correct.current.play();
       setMessage("Bravo you win 😊");
-      setScore((prev) => prev + 1);
-      setTimeout(() => {
-        fetchData();
-      }, 2000);
+
+      setScore((prev) => {
+        const newScore = prev + 1;
+        if (newScore >= 20) {
+          setWin(true);
+          setDisabled(true);
+        } else {
+          setTimeout(() => {
+            fetchData();
+          }, 1000);
+        }
+        return newScore;
+      });
+
     } else {
       wrong.current.play();
       setMistake((prev) => {
@@ -57,14 +75,16 @@ function App() {
         } else {
           setMessage("You lost 😒");
         }
+
+        setTimeout(() => {
+          if (updated < 3) {
+            setDisabled(false);
+            fetchData();
+          }
+        }, 2000);
+
         return updated;
       });
-      setTimeout(() => {
-        setDisabled(false);
-        if (mistake < 3) {
-          fetchData();
-        }
-      }, 2000);
     }
   };
 
@@ -74,7 +94,7 @@ function App() {
 
   return (
     <div className="container" style={{ textAlign: "center", padding: "20px" }}>
-      {mistake === 3 ? (
+      {mistake === 3 || win ? (
         <div>
           {gameOverGif && (
             <img
@@ -83,12 +103,17 @@ function App() {
               style={{ width: "150px", marginTop: "10px" }}
             />
           )}
-          <h2>score: {score}</h2>
+          <h2 style={{ color: win ? "green" : "red" }}>
+            {win ? "Tebrikler, kazandın!" : "Game Over"}
+          </h2>
+          <h2>Score: {score}</h2>
           <button
             onClick={() => {
               setMistake(0);
               setScore(0);
               setGameOverGif(false);
+              setUsedWords([]);
+              setWin(false);
               fetchData();
             }}
           >
